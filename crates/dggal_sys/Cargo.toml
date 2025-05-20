@@ -3,7 +3,8 @@ name = "dggal_sys"
 version = "0.1.0"
 edition = "2024"
 description = "The DGGAL SYS crate"
-licence = "LICENCE"
+license = "BSD 3-Clause License" 
+license-file = "LICENCE"
 
 [dependencies]
 ecrt_sys = "0.1.0"

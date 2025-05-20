@@ -3,6 +3,7 @@ name = "dggal"
 version = "0.1.0"
 edition = "2024"
 description = "The DGGAL crate"
+license = "LICENSE"
 
 [dependencies]
 ecrt_sys = "0.1.0"

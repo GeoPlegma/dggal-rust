@@ -2,3 +2,6 @@ ecere/
 *.a
 *.rlib
 **/target
+crates/ecrt_sys/src/lib.rs
+crates/dggal_sys/src/lib.rs
+crates/dggal/src/lib.rs

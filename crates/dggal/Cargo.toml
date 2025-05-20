@@ -5,5 +5,5 @@ edition = "2024"
 description = "The DGGAL crate"
 
 [dependencies]
-ecrt_sys
-dggal_sys
+ecrt_sys = "0.1.0"
+dggal_sys = "0.1.0"

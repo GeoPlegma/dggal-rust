@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2024"
 description = "The ECERE SYS crate"
 license = "BSD 3-Clause License" 
-license-file = "LICENCE"
+license-file = "LICENSE"
 

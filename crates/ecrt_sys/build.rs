@@ -4,7 +4,7 @@ use std::path::PathBuf;
 fn main() {
     let dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
 
-    println!("cargo:rustc-link-search=native={}", dir.display());
+    println!("cargo:rustc-link-search=native=lib");
 
     // Link against static ecrt libraries
     println!("cargo:rustc-link-lib=static=ecrt_cStatic");

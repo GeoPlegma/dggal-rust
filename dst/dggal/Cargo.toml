@@ -1,0 +1,9 @@
+[package]
+name = "dggal"
+version = "0.1.0"
+edition = "2024"
+description = "The DGGAL crate"
+
+[dependencies]
+ecrt_sys
+dggal_sys

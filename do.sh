@@ -2,13 +2,14 @@
 echo test
 
 rm -rf ecere
-mkdir ecere
+mkdir ecere  
+
 
 git clone git@github.com:ecere/dggal.git ecere/dggal
 cd ecere/dggal/
 ./fetchAndBuild.sh
 
-cd ../../dst
+cd ../../crates
 
 
 cp ../ecere/dggal/dgbuild/dggal/bindings/rust/ecrt_cffi.rs ./ecrt_sys/src/lib.rs

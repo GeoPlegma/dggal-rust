@@ -1,3 +1,4 @@
 ecere/
 *.a
 *.rlib
+**/target

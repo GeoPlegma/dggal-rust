@@ -5,4 +5,3 @@ edition = "2024"
 description = "The DGGAL SYS crate"
 
 [dependencies]
-ecrt_sys

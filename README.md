@@ -14,6 +14,14 @@ Licence
 
 This project clones, compiles, and distributes code from [https://github.com/ecere/dggal](https://github.com/ecere/dggal) licensed under [BSD 3-Clause License](https://github.com/ecere/dggal/blob/eC-core/LICENSE), everythinh else in licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0) LICENSE-APACHE or the [MIT license](http://opensource.org/licenses/MIT), at your discretion. All contents herewith  may not be copied, modified, or distributed except according to the terms defined in the licence chosen. Refer to the files  [LICENCE](LICENCE), [LICENCE-APACHE.txt](LICENCE-APACHE.txt) and [LICENCE-MIT.txt](LICENCE-MIT.txt) for details.
 
+
+Publishing
+---------
+
+To publish to crates.io set the `CARGO_REGISTRY_TOKEN` and then run `cargo publish`
+
+Folder structure
+----------------
 ```
 dst/
 ├── dggal

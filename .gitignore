@@ -1,2 +1,3 @@
 ecere/
 **/target
+Cargo.lock

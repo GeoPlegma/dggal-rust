@@ -5,3 +5,6 @@ edition = "2024"
 description = "The ECERE SYS crate"
 license-file = "LICENSE"
 
+
+[build-dependencies]
+walkdir = "2"

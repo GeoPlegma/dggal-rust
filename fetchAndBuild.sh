@@ -28,6 +28,16 @@ make -j4
 
 echo ""
 echo "**************************************"
+echo "************ DGGAL for eC ************"
+echo "**************************************"
+echo "Execution test for DGG tool:"
+export LD_LIBRARY_PATH=$(pwd)/../eC/obj/linux/lib/:$(pwd)/obj/release.linux:$(pwd)/obj/linux/lib
+obj/release.linux/dgg ISEA3H info A4-0-A
+echo "Execution test for (static) DGG tool:"
+obj/static.linux/dgg ISEA3H info A4-0-A
+
+echo ""
+echo "**************************************"
 echo "*********** DGGAL for rust ***********"
 echo "**************************************"
 echo "Building DGGAL for rust..."

@@ -1,9 +1,54 @@
+use glob;
 use std::env;
 use std::fs;
 use std::fs::{read_to_string, write};
+use std::io;
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use walkdir::WalkDir;
+use std::process::{Command, Stdio};
+
+#[cfg(unix)]
+use std::os::unix::fs::symlink as symlink_file;
+
+#[cfg(windows)]
+use std::os::windows::fs::symlink_file;
+
+/// Cross-platform symlink creator (for files)
+fn create_symlink(src: &Path, dst: &Path) -> io::Result<()> {
+    #[cfg(windows)]
+    {
+        if dst.exists() {
+            std::fs::remove_file(dst)?;
+        }
+        symlink_file(src, dst)
+    }
+
+    #[cfg(unix)]
+    {
+        if dst.exists() {
+            std::fs::remove_file(dst)?;
+        }
+        symlink_file(src, dst)
+    }
+}
+
+fn ensure_symlinks(from_dir: &Path, to_dir: &Path, filenames: &[&str]) {
+    fs::create_dir_all(to_dir).unwrap();
+
+    for name in filenames {
+        let src = from_dir.join(name);
+        let dst = to_dir.join(name);
+        if !src.exists() {
+            println!("cargo:warning=Missing source file for symlink: {:?}", src);
+            continue;
+        }
+        if dst.exists() {
+            fs::remove_file(&dst).unwrap();
+        }
+        symlink_file(&src, &dst).unwrap_or_else(|e| {
+            panic!("Failed to symlink {:?} -> {:?}: {:?}", dst, src, e);
+        });
+    }
+}
 
 fn patch_ecrt_cffi_rs(lib_rs_path: &Path) {
     let mut content = read_to_string(lib_rs_path).expect("Failed to read lib.rs");
@@ -79,6 +124,7 @@ fn find_and_copy(dgbuild: &Path, filename: &str, dest_dir: &Path) {
         .filter(|e| e.file_type().is_file() && e.file_name() == filename)
     {
         let src = entry.path();
+        println!("{:?}", src);
         let dst = dest_dir.join(filename);
         println!("cargo:warning=Copying {:?} to {:?}", src, dst);
         fs::create_dir_all(dest_dir).unwrap();
@@ -92,60 +138,101 @@ fn find_and_copy(dgbuild: &Path, filename: &str, dest_dir: &Path) {
     }
 }
 
+fn run(cmd: &mut Command) {
+    println!("cargo:warning=Running: {:?}", cmd);
+    let status = cmd
+        .stdin(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .expect("failed to execute command");
+    if !status.success() {
+        panic!("Command failed: {:?}", cmd);
+    }
+}
+
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let lib_dir = manifest_dir.join("lib");
-
-    //Choose script based on platform
-    let script = if cfg!(target_os = "windows") {
-        println!("cargo:rerun-if-changed=fetchAndBuild.bat");
-        "fetchAndBuild.bat"
-    } else {
-        println!("cargo:rerun-if-changed=fetchAndBuild.sh");
-        "fetchAndBuild.sh"
-    };
-
-    let script_path = manifest_dir.join(script);
-
-    if !script_path.exists() {
-        panic!("Build script not found: {:?}", script_path);
-    }
-
-    let status = Command::new(&script_path)
-        .current_dir(&manifest_dir)
-        .status()
-        .expect("Failed to run fetchAndBuild script");
-
-    if !status.success() {
-        panic!("fetchandbuild failed");
-    }
-
-    // Copy compiled libraries to ./lib
     let dgbuild = manifest_dir.join("dgbuild");
 
-    //    let copy_targets = [
-    //        "dggal/obj/linux/lib/libecrt_sys.rlib", // TODO: we need to handle windows and linux and debug versions
-    //        "dggal/obj/linux/lib/libecrt_cStatic.a",
-    //        "eC/obj/linux/lib/libecrtStatic.a",
-    //        "dggal/obj/linux/lib/libdggal_sys.rlib",
-    //        "dggal/obj/linux/lib/libdggal_cStatic.a",
-    //        "dggal/obj/static.linux/libdggalStatic.a",
-    //        "dggal/obj/linux/lib/libdggal.rlib",
-    //    ];
-    //
-    //    for rel_path in &copy_targets {
-    //        let src = dgbuild.join(rel_path);
-    //        let dst = lib_dir.join(src.file_name().unwrap());
-    //        copy_if_exists(&src, &dst);
-    //    }
+    // Clean and recreate dgbuild
+    if lib_dir.exists() {
+        println!("cargo:warning=Removing existing lib");
+        fs::remove_dir_all(&lib_dir).expect("Failed to remove lib");
+    }
+    fs::create_dir(&lib_dir).expect("Failed to create lib");
 
-    // TODO: on windows these names should b different?
+    // Clean and recreate dgbuild
+    if dgbuild.exists() {
+        println!("cargo:warning=Removing existing dgbuild");
+        fs::remove_dir_all(&dgbuild).expect("Failed to remove dgbuild");
+    }
+    fs::create_dir(&dgbuild).expect("Failed to create dgbuild");
+
+    // Clone eC
+    run(Command::new("git")
+        .arg("clone")
+        .arg("-b")
+        .arg("main")
+        .arg("--single-branch")
+        .arg("https://github.com/ecere/eC.git")
+        .current_dir(&dgbuild));
+
+    // Clone dggal
+    run(Command::new("git")
+        .arg("clone")
+        .arg("-b")
+        .arg("eC-core")
+        .arg("--single-branch")
+        .arg("https://github.com/ecere/dggal.git")
+        .current_dir(&dgbuild));
+
+    // make -j4 in eC
+    println!("make -j4 in eC");
+    run(Command::new("make")
+        .arg("-j4")
+        //.arg("ecrt_static")
+        .current_dir(&dgbuild.join("eC")));
+
+    let ecrt_debug_lib = dgbuild.join("eC/obj/linux.debug/lib");
+    let ecrt_link_lib = dgbuild.join("eC/obj/linux/lib");
+
+    ensure_symlinks(
+        &ecrt_debug_lib,
+        &ecrt_link_lib,
+        &[
+            "libecrtStatic.a",
+            "libecrt.so",
+            "libecrt.so.0",
+            "libecrt.so.0.0",
+            "libecrt.so.0.0.1",
+        ],
+    );
+
+    // make -j4 in dggal
+    println!("make -j4 in dggal");
+    run(Command::new("make")
+        .arg("-j4")
+        .arg("-f")
+        .arg("Makefile.dggal.static")
+        .current_dir(&dgbuild.join("dggal")));
+
+    // 4. Symlink libdggalStatic.a after it's built
+    let dggal_debug_lib = dgbuild.join("dggal/obj/static.linux.debug"); //NOTE:this is not in a lib/ folder
+    let dggal_link_lib = dgbuild.join("dggal/obj/static.linux/lib");
+    ensure_symlinks(&dggal_debug_lib, &dggal_link_lib, &["libdggalStatic.a"]);
+
+    // make in dggal/bindings/rust
+    run(Command::new("make").current_dir(&dgbuild.join("dggal/bindings/rust")));
+
+    // TODO: on windows these names should be different or not?
     let filenames = [
         "libecrt_sys.rlib",
-        "libecrt_cStatic.a",
+        //"libecrt_cStatic.a",
         "libecrtStatic.a",
         "libdggal_sys.rlib",
-        "libdggal_cStatic.a",
+        //"libdggal_cStatic.a",
         "libdggalStatic.a",
         "libdggal.rlib",
     ];

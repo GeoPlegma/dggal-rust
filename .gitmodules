@@ -1,0 +1,6 @@
+[submodule "eC"]
+	path = eC
+	url = https://github.com/ecere/eC
+[submodule "dggal"]
+	path = dggal
+	url = https://github.com/ecere/dggal

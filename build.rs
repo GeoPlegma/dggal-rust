@@ -1,4 +1,4 @@
-use glob;
+use make_cmd::make;
 use std::env;
 use std::fs;
 use std::fs::{read_to_string, write};
@@ -156,6 +156,31 @@ fn main() {
     let lib_dir = manifest_dir.join("lib");
     let dgbuild = manifest_dir.join("dgbuild");
 
+    let ec_obj = manifest_dir.join("eC/obj");
+    let ec_bindings_obj = manifest_dir.join("eC/bindings/rust/obj");
+    let dggal_obj = manifest_dir.join("dggal/obj");
+    let dggal_bindings_obj = manifest_dir.join("dggal/bindings/rust/obj");
+
+    if ec_obj.exists() {
+        println!("cargo:warning=Cleaning eC/obj");
+        fs::remove_dir_all(&ec_obj).expect("Failed to clean eC/obj");
+    }
+
+    if ec_bindings_obj.exists() {
+        println!("cargo:warning=Cleaning eC/bindings/rust/obj");
+        fs::remove_dir_all(&ec_bindings_obj).expect("Failed to clean eC/bindings/rust/obj");
+    }
+
+    if dggal_obj.exists() {
+        println!("cargo:warning=Cleaning dggal/obj");
+        fs::remove_dir_all(&dggal_obj).expect("Failed to clean dggal/obj");
+    }
+
+    if dggal_bindings_obj.exists() {
+        println!("cargo:warning=Cleaning dggal/bindings/rust/obj");
+        fs::remove_dir_all(&dggal_bindings_obj).expect("Failed to clean dggal/bindings/rust/obj");
+    }
+
     // Clean and recreate dgbuild
     if lib_dir.exists() {
         println!("cargo:warning=Removing existing lib");
@@ -163,119 +188,31 @@ fn main() {
     }
     fs::create_dir(&lib_dir).expect("Failed to create lib");
 
-    // Clean and recreate dgbuild
-    if dgbuild.exists() {
-        println!("cargo:warning=Removing existing dgbuild");
-        fs::remove_dir_all(&dgbuild).expect("Failed to remove dgbuild");
-    }
-    fs::create_dir(&dgbuild).expect("Failed to create dgbuild");
+    make()
+        .current_dir(&manifest_dir.join("eC/"))
+        .status()
+        .expect("Failed to run `make` in eC/");
 
-    // Clone eC
-    run(Command::new("git")
-        .arg("clone")
-        .arg("-b")
-        .arg("main")
-        .arg("--single-branch")
-        .arg("https://github.com/ecere/eC.git")
-        .current_dir(&dgbuild));
+    let output = make()
+        .current_dir(&manifest_dir.join("eC/bindings/rust/"))
+        .output()
+        .expect("Failed to run make");
 
-    // Clone dggal
-    run(Command::new("git")
-        .arg("clone")
-        .arg("-b")
-        .arg("eC-core")
-        .arg("--single-branch")
-        .arg("https://github.com/ecere/dggal.git")
-        .current_dir(&dgbuild));
+    println!("stdout:\n{}", String::from_utf8_lossy(&output.stdout));
+    eprintln!("stderr:\n{}", String::from_utf8_lossy(&output.stderr));
 
-    // make -j4 in eC
-    println!("make -j4 in eC");
-    run(Command::new("make")
-        .arg("-j4")
-        //.arg("ecrt_static")
-        .current_dir(&dgbuild.join("eC")));
-
-    let ecrt_debug_lib = dgbuild.join("eC/obj/linux.debug/lib");
-    let ecrt_link_lib = dgbuild.join("eC/obj/linux/lib");
-
-    ensure_symlinks(
-        &ecrt_debug_lib,
-        &ecrt_link_lib,
-        &[
-            "libecrtStatic.a",
-            "libecrt.so",
-            "libecrt.so.0",
-            "libecrt.so.0.0",
-            "libecrt.so.0.0.1",
-        ],
-    );
-
-    // make -j4 in dggal
-    println!("make -j4 in dggal");
-    run(Command::new("make")
-        .arg("-j4")
-        .arg("-f")
-        .arg("Makefile.dggal.static")
-        .current_dir(&dgbuild.join("dggal")));
-
-    // 4. Symlink libdggalStatic.a after it's built
-    let dggal_debug_lib = dgbuild.join("dggal/obj/static.linux.debug"); //NOTE:this is not in a lib/ folder
-    let dggal_link_lib = dgbuild.join("dggal/obj/static.linux/lib");
-    ensure_symlinks(&dggal_debug_lib, &dggal_link_lib, &["libdggalStatic.a"]);
-
-    // make in dggal/bindings/rust
-    run(Command::new("make").current_dir(&dgbuild.join("dggal/bindings/rust")));
-
-    // TODO: on windows these names should be different or not?
-    let filenames = [
-        "libecrt_sys.rlib",
-        //"libecrt_cStatic.a",
-        "libecrtStatic.a",
-        "libdggal_sys.rlib",
-        //"libdggal_cStatic.a",
-        "libdggalStatic.a",
-        "libdggal.rlib",
-    ];
-
-    for fname in &filenames {
-        find_and_copy(&dgbuild, fname, &lib_dir);
+    if !output.status.success() {
+        panic!("make for eC Rust bindings failed");
     }
 
-    // ecrt_sys
-    copy_if_exists(
-        &dgbuild.join("dggal/bindings/rust/ecrt_cffi.rs"),
-        &manifest_dir.join("src/ecrt_cffi.rs"),
-    );
-    let ecrt_cffi_path = manifest_dir.join("src/ecrt_cffi.rs");
-    patch_ecrt_cffi_rs(&ecrt_cffi_path);
-
-    // dggal_sys
-    copy_if_exists(
-        &dgbuild.join("dggal/bindings/rust/dggal_cffi.rs"),
-        &manifest_dir.join("src/dggal_cffi.rs"),
-    );
-    let dggal_cffi_path = manifest_dir.join("src/dggal_cffi.rs");
-    patch_dggal_cffi_rs(&dggal_cffi_path);
-
-    // dggal
-    copy_if_exists(
-        &dgbuild.join("dggal/bindings/rust/dggal.rs"),
-        &manifest_dir.join("src/lib.rs"),
-    );
-    let dggal_path = manifest_dir.join("src/lib.rs");
-    patch_dggal_rs(&dggal_path);
-
-    // Copy LICENSE file
-    copy_if_exists(
-        &dgbuild.join("dggal/LICENSE"), // adjust path if needed
-        &manifest_dir.join("LICENSE"),
-    );
-
-    // Copy LICENSE file
-    copy_if_exists(
-        &dgbuild.join("dggal/README.md"), // adjust path if needed
-        &manifest_dir.join("README.md"),
-    );
+    make()
+        .current_dir(&manifest_dir.join("dggal/"))
+        .status()
+        .expect("Failed to run `make` in dggal/");
+    make()
+        .current_dir(&manifest_dir.join("dggal/bindings/rust/"))
+        .status()
+        .expect("Failed to run `make` in dggal/bindings/rust/");
 
     // Link all needed libraries
     println!("cargo:rustc-link-search=native=lib");

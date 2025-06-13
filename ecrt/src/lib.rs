@@ -1,1 +1,1 @@
-../../eC/bindings/rust/ecrt.rs
+../../ecere/ec/bindings/rust/ecrt.rs

@@ -152,6 +152,22 @@ fn run(cmd: &mut Command) {
 }
 
 fn main() {
+    println!("cargo:warning=--- ENVIRONMENT VARIABLES ---");
+    for (key, value) in std::env::vars() {
+        println!("cargo:warning={}={}", key, value);
+    }
+
+    println!("cargo:warning=--- IMPORTANT PATHS ---");
+
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| "<not set>".into());
+    println!("cargo:warning=CARGO_MANIFEST_DIR = {}", manifest_dir);
+
+    let out_dir = std::env::var("OUT_DIR").unwrap_or_else(|_| "<not set>".into());
+    println!("cargo:warning=OUT_DIR = {}", out_dir);
+
+    let target_dir = std::env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "<not set>".into());
+    println!("cargo:warning=CARGO_TARGET_DIR = {}", target_dir);
+
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let lib_dir = manifest_dir.join("lib");
     let dgbuild = manifest_dir.join("dgbuild");
@@ -197,9 +213,11 @@ fn main() {
         .current_dir(&manifest_dir.join("eC/bindings/rust/"))
         .output()
         .expect("Failed to run make");
+    let stdout_str = String::from_utf8_lossy(&output.stdout);
+    let stderr_str = String::from_utf8_lossy(&output.stderr);
 
-    println!("stdout:\n{}", String::from_utf8_lossy(&output.stdout));
-    eprintln!("stderr:\n{}", String::from_utf8_lossy(&output.stderr));
+    println!("cargo:warning=make stdout:\n{}", stdout_str);
+    println!("cargo:warning=make stderr:\n{}", stderr_str);
 
     if !output.status.success() {
         panic!("make for eC Rust bindings failed");

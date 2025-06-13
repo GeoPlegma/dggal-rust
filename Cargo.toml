@@ -1,11 +1,8 @@
-[package]
-name = "dggal"
-version = "0.1.2"
-edition = "2021"
-description = "The ECERE SYS crate"
-license-file = "LICENSE"
-
-
-[build-dependencies]
-walkdir = "2"
-make-cmd = "0.1.0"
+# dggal-rust/Cargo.toml
+[workspace]
+resolver = "2"
+members = [
+    "ecrt-sys",
+    "ecrt",
+    "ecdev-rust",
+]

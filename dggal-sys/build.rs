@@ -5,34 +5,34 @@ use std::process::Command;
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let ec_dir = manifest_dir.join("..").join("ecere/eC");
-    let bindings_dir = ec_dir.join("bindings/rust");
+    let dggal_dir = manifest_dir.join("..").join("ecere/dggal");
+    let bindings_dir = dggal_dir.join("bindings/rust");
     let lib_dir = manifest_dir.join("lib");
 
     // Step 0: clean ecere/eC/
-    let status = Command::new("make")
-        .current_dir(&ec_dir)
-        .arg("distclean")
-        .status()
-        .expect("Failed to run `make distclean` in ecere/ec/");
-    if !status.success() {
-        panic!("make distclean in ecere/eC/ failed");
-    }
+    // let status = Command::new("make")
+    //     .current_dir(&dggal_dir)
+    //     .arg("distclean")
+    //     .status()
+    //     .expect("Failed to run `make distclean` in ecere/ec/");
+    // if !status.success() {
+    //     panic!("make distclean in ecere/eC/ failed");
+    // }
 
-    // Step 1: Build eC core in ecere/eC/
+    // Step 1: Build dggal core in ecere/dggal/
     let status = Command::new("make")
-        .current_dir(&ec_dir)
+        .current_dir(&dggal_dir)
         .status()
-        .expect("Failed to run `make` in ecere/ec/");
+        .expect("Failed to run `make` in ecere/dggal/");
     if !status.success() {
-        panic!("make in ecere/eC/ failed");
+        panic!("make in ecere/dggal/ failed");
     }
 
     // Step 2: Build Rust bindings via Makefile.ecrt-sys
     let output = Command::new("make")
         .current_dir(&bindings_dir)
         .arg("-f")
-        .arg("Makefile.ecrt-sys")
+        .arg("Makefile")
         .output()
         .expect("Failed to run make");
 
@@ -46,24 +46,24 @@ fn main() {
     );
 
     if !output.status.success() {
-        panic!("make for eC Rust bindings failed");
+        panic!("make for dggal Rust bindings failed");
     }
 
     fs::create_dir_all(&lib_dir).expect("Failed to create lib/ directory");
 
     fs::copy(
-        ec_dir.join("obj/linux/lib/libecrt_cStatic.a"),
-        lib_dir.join("libecrt_cStatic.a"),
+        dggal_dir.join("obj/linux/lib/libdggal_cStatic.a"),
+        lib_dir.join("libdggal_cStatic.a"),
     )
     .expect("Failed to copy libecrt_cStatic.a");
 
     fs::copy(
-        ec_dir.join("bindings/rust/obj/linux/libecrt_sys.rlib"),
-        lib_dir.join("libecrt_sys.rlib"),
+        dggal_dir.join("bindings/rust/obj/linux/libdggal_sys.rlib"),
+        lib_dir.join("libdggal_sys.rlib"),
     )
-    .expect("Failed to copy libecrt_sys.rlib");
+    .expect("Failed to copy libdggal_sys.rlib");
 
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
-    println!("cargo:rustc-link-lib=static=ecrt_cStatic");
+    println!("cargo:rustc-link-lib=static=dggal_cStatic");
     //println!("cargo:rustc-link-lib=static=ecrt_sys");
 }

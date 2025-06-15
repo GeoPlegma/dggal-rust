@@ -1,1 +1,1 @@
-../../ecere/ec/bindings/rust/ecrt_cffi.rs
+../../ecere/eC/bindings/rust/ecrt_cffi.rs

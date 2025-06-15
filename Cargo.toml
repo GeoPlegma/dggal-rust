@@ -4,5 +4,6 @@ resolver = "2"
 members = [
     "ecrt-sys",
     "ecrt",
+    "dggal-sys",
     "ecdev-rust",
 ]

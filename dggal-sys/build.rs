@@ -3,49 +3,110 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
+/// make is an alias for gnu_make.
+pub use gnu_make as make;
+
+#[cfg(any(
+    target_os = "freebsd",
+    target_os = "dragonfly",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+pub fn gnu_make() -> Command {
+    Command::new("gmake")
+}
+
+#[cfg(not(any(
+    target_os = "freebsd",
+    target_os = "dragonfly",
+    target_os = "netbsd",
+    target_os = "openbsd",
+)))]
+pub fn gnu_make() -> Command {
+    Command::new("make")
+}
+
+#[cfg(any(
+    target_os = "freebsd",
+    target_os = "dragonfly",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+pub fn bsd_make() -> Command {
+    Command::new("make")
+}
+
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let dggal_dir = manifest_dir.join("..").join("ecere/dggal");
+    let dggal_dir = manifest_dir
+        .join("..")
+        .join("ecere/dggal")
+        .canonicalize()
+        .expect("failed to canonicalize make path");
     let bindings_dir = dggal_dir.join("bindings/rust");
     let lib_dir = manifest_dir.join("lib");
 
     // Step 0: clean ecere/eC/
-    // let status = Command::new("make")
-    //     .current_dir(&dggal_dir)
-    //     .arg("distclean")
-    //     .status()
-    //     .expect("Failed to run `make distclean` in ecere/ec/");
-    // if !status.success() {
-    //     panic!("make distclean in ecere/eC/ failed");
-    // }
-
-    // Step 1: Build dggal core in ecere/dggal/
-    let status = Command::new("make")
+    let status = make()
         .current_dir(&dggal_dir)
+        .arg("distclean")
         .status()
-        .expect("Failed to run `make` in ecere/dggal/");
+        .expect("Failed to run `make distclean` in ecere/dggal/");
     if !status.success() {
-        panic!("make in ecere/dggal/ failed");
+        panic!("make distclean in ecere/dggal/ failed");
     }
 
-    // Step 2: Build Rust bindings via Makefile.ecrt-sys
-    let output = Command::new("make")
+    let dggal_dir_obj = &dggal_dir.join("obj");
+    if dggal_dir_obj.exists() {
+        println!("cargo:warning=Cleaning {:?}", dggal_dir_obj); // optional debug
+        if let Err(err) = fs::remove_dir_all(&dggal_dir_obj) {
+            panic!("Failed to delete {:?}: {}", dggal_dir_obj, err);
+        }
+    }
+
+    // Step 1: Build dggal core in ecere/dggal/
+    let dggal_dir_output = make()
+        .current_dir(&dggal_dir)
+        .output()
+        .expect(&format!("Failed to run make in {:?}", dggal_dir));
+
+    println!(
+        "cargo:warning=make stdout:\n{}",
+        String::from_utf8_lossy(&dggal_dir_output.stdout)
+    );
+    println!(
+        "cargo:warning=make stderr:\n{}",
+        String::from_utf8_lossy(&dggal_dir_output.stderr)
+    );
+
+    if !dggal_dir_output.status.success() {
+        panic!("make in {:?} failed", dggal_dir);
+    }
+
+    let bindings_dir_obj = &bindings_dir.join("obj");
+    if bindings_dir_obj.exists() {
+        println!("cargo:warning=Cleaning {:?}", bindings_dir_obj); // optional debug
+        if let Err(err) = fs::remove_dir_all(&bindings_dir_obj) {
+            panic!("Failed to delete {:?}: {}", bindings_dir_obj, err);
+        }
+    }
+
+    // Step 2: Build Rust bindings via Makefile
+    let bindings_dir_output = make()
         .current_dir(&bindings_dir)
-        .arg("-f")
-        .arg("Makefile")
         .output()
         .expect("Failed to run make");
 
     println!(
         "cargo:warning=make stdout:\n{}",
-        String::from_utf8_lossy(&output.stdout)
+        String::from_utf8_lossy(&bindings_dir_output.stdout)
     );
     println!(
         "cargo:warning=make stderr:\n{}",
-        String::from_utf8_lossy(&output.stderr)
+        String::from_utf8_lossy(&bindings_dir_output.stderr)
     );
 
-    if !output.status.success() {
+    if !bindings_dir_output.status.success() {
         panic!("make for dggal Rust bindings failed");
     }
 

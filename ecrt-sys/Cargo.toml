@@ -11,4 +11,3 @@ name = "ecrt_sys"
 path = "src/lib.rs"
 crate-type = ["rlib"]
 
-

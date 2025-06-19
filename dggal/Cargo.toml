@@ -6,7 +6,7 @@ description = "The dggal crate"
 license-file = "LICENSE"
 
 [lib]
-name = "ecrt"
+name = "dggal"
 path = "src/lib.rs"
 crate-type = ["rlib"]
 

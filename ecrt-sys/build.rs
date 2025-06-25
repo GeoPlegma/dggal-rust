@@ -43,7 +43,7 @@ fn main() {
         .join("ecere/eC")
         .canonicalize()
         .expect("failed to canonicalize make path");
-    let bindings_dir = ec_dir.join("bindings/rust");
+    let bindings_dir = ec_dir.join("bindings/c");
     let lib_dir = manifest_dir.join("lib");
 
     // Step 0: clean ecere/eC/
@@ -56,17 +56,18 @@ fn main() {
         panic!("make distclean in ecere/eC/ failed");
     }
 
-    let ec_dir_obj = &ec_dir.join("obj");
-    if ec_dir_obj.exists() {
-        println!("cargo:warning=Cleaning {:?}", ec_dir_obj); // optional debug
-        if let Err(err) = fs::remove_dir_all(&ec_dir_obj) {
-            panic!("Failed to delete {:?}: {}", ec_dir, err);
-        }
-    }
+    // let ec_dir_obj = &ec_dir.join("obj");
+    // if ec_dir_obj.exists() {
+    //     println!("cargo:warning=Cleaning {:?}", ec_dir_obj); // optional debug
+    //     if let Err(err) = fs::remove_dir_all(&ec_dir_obj) {
+    //         panic!("Failed to delete {:?}: {}", ec_dir, err);
+    //     }
+    // }
 
     // Step 1: Build eC core in ecere/eC/
     let ec_dir_output = make()
         .current_dir(&ec_dir)
+        .env_remove("DEBUG")
         .output()
         .expect(&format!("Failed to run make in {:?}", ec_dir));
 
@@ -94,8 +95,7 @@ fn main() {
     // Step 2: Build Rust bindings via Makefile.ecrt-sys
     let bindings_dir_output = make()
         .current_dir(&bindings_dir)
-        .arg("-f")
-        .arg("Makefile.ecrt-sys")
+        .env_remove("DEBUG")
         .output()
         .expect(&format!("Failed to run `make` in {:?}", bindings_dir));
 
@@ -112,6 +112,7 @@ fn main() {
         panic!("make in {:?} failed", bindings_dir);
     }
 
+    fs::remove_dir_all(&lib_dir).expect("Failed to delete lib/ directory");
     fs::create_dir_all(&lib_dir).expect("Failed to create lib/ directory");
 
     fs::copy(
@@ -120,11 +121,11 @@ fn main() {
     )
     .expect("Failed to copy libecrt_cStatic.a");
 
-    fs::copy(
-        ec_dir.join("bindings/rust/obj/linux/libecrt_sys.rlib"),
-        lib_dir.join("libecrt_sys.rlib"),
-    )
-    .expect("Failed to copy libecrt_sys.rlib");
+    // fs::copy(
+    //     ec_dir.join("bindings/rust/obj/linux/libecrt_sys.rlib"),
+    //     lib_dir.join("libecrt_sys.rlib"),
+    // )
+    // .expect("Failed to copy libecrt_sys.rlib");
 
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
     println!("cargo:rustc-link-lib=static=ecrt_cStatic");

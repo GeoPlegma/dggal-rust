@@ -1,6 +1,8 @@
 [submodule "ecere/dggal"]
 	path = ecere/dggal
 	url = https://github.com/ecere/dggal
+	branch = eC-core
 [submodule "ecere/eC"]
 	path = ecere/eC
 	url = https://github.com/ecere/eC
+	branch = main

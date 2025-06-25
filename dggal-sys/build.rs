@@ -43,7 +43,7 @@ fn main() {
         .join("ecere/dggal")
         .canonicalize()
         .expect("failed to canonicalize make path");
-    let bindings_dir = dggal_dir.join("bindings/rust");
+    let bindings_dir = dggal_dir.join("bindings/c");
     let lib_dir = manifest_dir.join("lib");
 
     // Step 0: clean ecere/eC/
@@ -56,17 +56,18 @@ fn main() {
         panic!("make distclean in ecere/dggal/ failed");
     }
 
-    let dggal_dir_obj = &dggal_dir.join("obj");
-    if dggal_dir_obj.exists() {
-        println!("cargo:warning=Cleaning {:?}", dggal_dir_obj); // optional debug
-        if let Err(err) = fs::remove_dir_all(&dggal_dir_obj) {
-            panic!("Failed to delete {:?}: {}", dggal_dir_obj, err);
-        }
-    }
+    // let dggal_dir_obj = &dggal_dir.join("obj");
+    // if dggal_dir_obj.exists() {
+    //     println!("cargo:warning=Cleaning {:?}", dggal_dir_obj); // optional debug
+    //     if let Err(err) = fs::remove_dir_all(&dggal_dir_obj) {
+    //         panic!("Failed to delete {:?}: {}", dggal_dir_obj, err);
+    //     }
+    // }
 
     // Step 1: Build dggal core in ecere/dggal/
     let dggal_dir_output = make()
         .current_dir(&dggal_dir)
+        .env_remove("DEBUG")
         .output()
         .expect(&format!("Failed to run make in {:?}", dggal_dir));
 
@@ -94,6 +95,7 @@ fn main() {
     // Step 2: Build Rust bindings via Makefile
     let bindings_dir_output = make()
         .current_dir(&bindings_dir)
+        .env_remove("DEBUG")
         .output()
         .expect("Failed to run make");
 
@@ -110,19 +112,20 @@ fn main() {
         panic!("make for dggal Rust bindings failed");
     }
 
+    fs::remove_dir_all(&lib_dir).expect("Failed to delete lib/ directory");
     fs::create_dir_all(&lib_dir).expect("Failed to create lib/ directory");
 
     fs::copy(
         dggal_dir.join("obj/linux/lib/libdggal_cStatic.a"),
         lib_dir.join("libdggal_cStatic.a"),
     )
-    .expect("Failed to copy libecrt_cStatic.a");
+    .expect("Failed to copy libdggal_cStatic.a");
 
-    fs::copy(
-        dggal_dir.join("bindings/rust/obj/linux/libdggal_sys.rlib"),
-        lib_dir.join("libdggal_sys.rlib"),
-    )
-    .expect("Failed to copy libdggal_sys.rlib");
+    // fs::copy(
+    //     dggal_dir.join("bindings/rust/obj/linux/libdggal_sys.rlib"),
+    //     lib_dir.join("libdggal_sys.rlib"),
+    // )
+    // .expect("Failed to copy libdggal_sys.rlib");
 
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
     println!("cargo:rustc-link-lib=static=dggal_cStatic");

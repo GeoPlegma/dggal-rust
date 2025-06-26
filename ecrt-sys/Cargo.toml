@@ -1,0 +1,13 @@
+[package]
+name = "ecrt-sys"
+version = "0.1.2"
+edition = "2021"
+description = "The ecrt-sys crate"
+license-file = "LICENSE"
+links = "ecrt_cStatic"  # Needed if linking C libs
+
+[lib]
+name = "ecrt_sys"
+path = "src/lib.rs"
+crate-type = ["rlib"]
+

@@ -1,0 +1,10 @@
+# dggal-rust/Cargo.toml
+[workspace]
+resolver = "2"
+members = [
+    "ecrt-sys",
+    "ecrt",
+    "dggal-sys",
+    "dggal",
+    "ecdev-rust",
+]

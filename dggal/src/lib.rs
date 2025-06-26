@@ -3,6 +3,23 @@
 //#![allow(unused_variables)]
 
 extern crate ecrt_sys;
+
+extern crate ecrt;
+
+use ecrt::define_bitclass;
+use ecrt::Application;
+use ecrt::File;
+use ecrt::nullVTbl;
+use ecrt::nullInst;
+use ecrt::nullPtr;
+use ecrt::Array;
+use ecrt::Map;
+use ecrt::FieldValue;
+use ecrt::ConstString;
+use ecrt::Instance;
+use ecrt::TTAU64;
+use ecrt::delegate_ttau64_and_default;
+
 extern crate dggal_sys;
 
 use std::ffi::CString;
@@ -10,42 +27,45 @@ use std::ffi::CStr;
 use std::ffi::c_void;
 use std::slice;
 use std::mem;
-
-// *** This code should be moved to / generated inside the DGGAL rust bindings
-pub const nullZone : dggal_sys::DGGRSZone = 0xFFFFFFFFFFFFFFFFu64;
-pub const nullInst : ecrt_sys::Instance = 0 as ecrt_sys::Instance;
-pub const nullVTbl : *mut *mut c_void = 0 as *mut *mut c_void;
-pub const nullPtr : *mut c_void = 0 as *mut c_void;
+use std::f64::consts::PI;
+use std::ops::Deref;
+/////
 
 pub type GeoPoint = dggal_sys::GeoPoint;
 pub type GeoExtent = dggal_sys::GeoExtent;
 pub type DGGRSZone = dggal_sys::DGGRSZone;
 
+pub const nullZone : DGGRSZone = 0xFFFFFFFFFFFFFFFFu64;
+
+pub const wholeWorld: GeoExtent = GeoExtent {
+   ll: GeoPoint { lat: -90.0 * PI / 180.0, lon : -180.0 * PI / 180.0 },
+   ur: GeoPoint { lat:  90.0 * PI / 180.0, lon :  180.0 * PI / 180.0 }
+};
+
+define_bitclass! { CRS, dggal_sys::CRS,
+    registry => { set: set_registry, is_bool: false, type: dggal_sys::CRSRegistry, prim_type: u32, mask: dggal_sys::CRS_registry_MASK, shift: dggal_sys::CRS_registry_SHIFT },
+    crsID =>    { set: set_crsID,    is_bool: false, type: u32,                    prim_type: u32, mask: dggal_sys::CRS_crsID_MASK,    shift: dggal_sys::CRS_crsID_SHIFT },
+    h =>        { set: set_h,        is_bool: true,  type: bool,                   prim_type: u32, mask: dggal_sys::CRS_h_MASK,        shift: dggal_sys::CRS_h_SHIFT }
+}
+
+#[macro_export] macro_rules! CRS {
+   ($registry:expr, $crsID:expr $(, $h:expr)?) => {
+      {
+         let mut instance = CRS(0);
+         instance.set_registry($registry);
+         instance.set_crsID($crsID);
+         $(instance.set_h($h);)?
+         instance
+      }
+   };
+}
+
+pub const epsg : dggal_sys::CRSRegistry = dggal_sys::CRSRegistry_CRSRegistry_epsg;
+pub const ogc  : dggal_sys::CRSRegistry = dggal_sys::CRSRegistry_CRSRegistry_ogc;
+
 pub struct DGGRS {
    imp: dggal_sys::DGGRS,
    mDGGAL: ecrt_sys::Module
-}
-
-pub struct Application {
-   app: ecrt_sys::Application
-}
-impl Drop for Application {
-   fn drop(&mut self) {
-      unsafe {
-         ecrt_sys::__eCNameSpace__eC__types__eInstance_DecRef(self.app);
-      }
-   }
-}
-
-impl Application {
-   pub fn new(_args: &Vec<String>) -> Application
-   {
-      unsafe {
-         let app = ecrt_sys::ecrt_init(nullInst, true as u32, false as u32, 0,
-               0 /*ptr::null_mut::<* mut * mut i8>()*/ as * mut * mut i8); // TODO: argc, args);
-         Application { app: app }
-      }
-   }
 }
 
 pub struct DGGAL {
@@ -59,27 +79,26 @@ impl DGGAL {
          DGGAL { mDGGAL: dggal_sys::dggal_init(app.app) }
       }
    }
+}
 
-   pub fn newDGGRS(&self, name: &str) -> Option<DGGRS>
+impl DGGRS {
+   pub fn new(dggal: &DGGAL, name: &str) -> Result<Self, String>
    {
       let dggrsName = CString::new(name).unwrap();
       unsafe {
-         let c = ecrt_sys::__eCNameSpace__eC__types__eSystem_FindClass(self.mDGGAL, dggrsName.as_ptr());
-
+         let c = ecrt_sys::__eCNameSpace__eC__types__eSystem_FindClass(dggal.mDGGAL, dggrsName.as_ptr());
          if c != nullVTbl as * mut ecrt_sys::Class {
-            Some(DGGRS { imp: ecrt_sys::__eCNameSpace__eC__types__eInstance_New(c) as dggal_sys::DGGRS, mDGGAL: self as *const _ as *mut _ })
+            Ok(DGGRS { imp: ecrt_sys::__eCNameSpace__eC__types__eInstance_New(c) as dggal_sys::DGGRS, mDGGAL: dggal.mDGGAL })
          }
          else {
-            None
+            Err(format!("Failure to instantiate DGGRS {name}"))
          }
       }
    }
 
-}
-
-impl DGGRS {
    // TODO: Could we use rust function-generating macros?
 
+   // These are the virtual methods:
    pub fn getZoneFromTextID(&self, zoneID: &str) -> dggal_sys::DGGRSZone
    {
       let mut zone = nullZone;
@@ -460,7 +479,7 @@ impl DGGRS {
       zone
    }
 
-   pub fn getZoneFromCRSCentroid(&self, level: i32, crs: dggal_sys::CRS, centroid: &ecrt_sys::Pointd) -> dggal_sys::DGGRSZone
+   pub fn getZoneFromCRSCentroid(&self, level: i32, crs: CRS, centroid: &ecrt_sys::Pointd) -> dggal_sys::DGGRSZone
    {
       let mut zone = nullZone;
       unsafe
@@ -470,7 +489,7 @@ impl DGGRS {
          let cMethod: usize = std::mem::transmute(*vTbl.add(dggal_sys::DGGRS_getZoneFromCRSCentroid_vTblID as usize));
          if cMethod != 0usize {
             let method : unsafe extern "C" fn(dggrs: dggal_sys::DGGRS, level: i32, crs: dggal_sys::CRS, centroid: * const ecrt_sys::Pointd) -> dggal_sys::DGGRSZone = std::mem::transmute(cMethod);
-            zone = method(self.imp, level, crs, centroid);
+            zone = method(self.imp, level, *crs, centroid);
          }
       }
       zone
@@ -604,7 +623,7 @@ impl DGGRS {
       index
    }
 
-   pub fn getSubZoneCRSCentroids(&self, parent: dggal_sys::DGGRSZone, crs: dggal_sys::CRS, relativeDepth: i32) -> Vec<ecrt_sys::Pointd>
+   pub fn getSubZoneCRSCentroids(&self, parent: dggal_sys::DGGRSZone, crs: CRS, relativeDepth: i32) -> Vec<ecrt_sys::Pointd>
    {
       let centroids: Vec<ecrt_sys::Pointd>;
       unsafe
@@ -617,7 +636,7 @@ impl DGGRS {
          let cMethod: usize = std::mem::transmute(*vTbl.add(dggal_sys::DGGRS_getSubZoneCRSCentroids_vTblID as usize));
          if cMethod != std::mem::transmute(0usize) {
             let method : unsafe extern "C" fn(dggrs: dggal_sys::DGGRS, parent: dggal_sys::DGGRSZone, crs: dggal_sys::CRS, relativeDepth: i32) -> dggal_sys::template_Array_Pointd = std::mem::transmute(cMethod);
-            let ap: dggal_sys::template_Array_Pointd = method(self.imp, parent, crs, relativeDepth);
+            let ap: dggal_sys::template_Array_Pointd = method(self.imp, parent, *crs, relativeDepth);
             if ap != nullInst {
                let am: *const ecrt_sys::class_members_Array = ((ap as *const i8).wrapping_add((*ecrt_sys::class_Array).offset as usize)) as *const ecrt_sys::class_members_Array;
                n = (*am).count as usize;
@@ -654,7 +673,7 @@ impl DGGRS {
       centroids
    }
 
-   pub fn getZoneCRSVertices(&self, zone: dggal_sys::DGGRSZone, crs: dggal_sys::CRS) -> Vec<ecrt_sys::Pointd>
+   pub fn getZoneCRSVertices(&self, zone: dggal_sys::DGGRSZone, crs: CRS) -> Vec<ecrt_sys::Pointd>
    {
       let vertices: Vec<ecrt_sys::Pointd>;
       unsafe
@@ -666,14 +685,14 @@ impl DGGRS {
          let mut n: i32 = 0;
          if cMethod != std::mem::transmute(0usize) {
             let method : unsafe extern "C" fn(dggrs: dggal_sys::DGGRS, zone: dggal_sys::DGGRSZone, crs: dggal_sys::CRS, vertices: *mut ecrt_sys::Pointd) -> i32 = std::mem::transmute(cMethod);
-            n = method(self.imp, zone, crs, std::ptr::from_mut(&mut v[0]));
+            n = method(self.imp, zone, *crs, std::ptr::from_mut(&mut v[0]));
          }
          vertices = slice::from_raw_parts(&v[0], n as usize).to_vec();
       }
       vertices
    }
 
-   pub fn getZoneRefinedCRSVertices(&self, zone: dggal_sys::DGGRSZone, crs: dggal_sys::CRS, refinement: i32) -> Vec<ecrt_sys::Pointd>
+   pub fn getZoneRefinedCRSVertices(&self, zone: dggal_sys::DGGRSZone, crs: CRS, refinement: i32) -> Vec<ecrt_sys::Pointd>
    {
       let vertices: Vec<ecrt_sys::Pointd>;
       unsafe
@@ -686,7 +705,7 @@ impl DGGRS {
          let cMethod: usize = std::mem::transmute(*vTbl.add(dggal_sys::DGGRS_getZoneRefinedCRSVertices_vTblID as usize));
          if cMethod != std::mem::transmute(0usize) {
             let method : unsafe extern "C" fn(dggrs: dggal_sys::DGGRS, zone: dggal_sys::DGGRSZone, crs: dggal_sys::CRS, refinement: i32) -> dggal_sys::template_Array_GeoPoint = std::mem::transmute(cMethod);
-            let ap: dggal_sys::template_Array_GeoPoint = method(self.imp, zone, crs, refinement);
+            let ap: dggal_sys::template_Array_GeoPoint = method(self.imp, zone, *crs, refinement);
             if ap != nullInst {
                let am: *const ecrt_sys::class_members_Array = ((ap as *const i8).wrapping_add((*ecrt_sys::class_Array).offset as usize)) as *const ecrt_sys::class_members_Array;
                n = (*am).count as usize;
@@ -698,7 +717,7 @@ impl DGGRS {
       vertices
    }
 
-   pub fn getZoneCRSCentroid(&self, zone: dggal_sys::DGGRSZone, crs: dggal_sys::CRS) -> ecrt_sys::Pointd
+   pub fn getZoneCRSCentroid(&self, zone: dggal_sys::DGGRSZone, crs: CRS) -> ecrt_sys::Pointd
    {
       let mut centroid = ecrt_sys::Pointd { x: 0.0, y: 0.0 };
       unsafe
@@ -708,13 +727,13 @@ impl DGGRS {
          let cMethod: usize = std::mem::transmute(*vTbl.add(dggal_sys::DGGRS_getZoneCRSCentroid_vTblID as usize));
          if cMethod != std::mem::transmute(0usize) {
             let method : unsafe extern "C" fn(dggrs: dggal_sys::DGGRS, zone: dggal_sys::DGGRSZone, crs: dggal_sys::CRS, centroid: *mut ecrt_sys::Pointd) = std::mem::transmute(cMethod);
-            method(self.imp, zone, crs, std::ptr::from_mut(&mut centroid));
+            method(self.imp, zone, *crs, std::ptr::from_mut(&mut centroid));
          }
       }
       centroid
    }
 
-   pub fn getZoneCRSExtent(&self, zone: dggal_sys::DGGRSZone, crs: dggal_sys::CRS) -> dggal_sys::CRSExtent
+   pub fn getZoneCRSExtent(&self, zone: dggal_sys::DGGRSZone, crs: CRS) -> dggal_sys::CRSExtent
    {
       let mut extent: dggal_sys::CRSExtent = dggal_sys::CRSExtent {    // REVIEW: Any way to avoid this initialization?
          tl: ecrt_sys::Pointd { x: 0.0, y: 0.0 },
@@ -727,13 +746,13 @@ impl DGGRS {
          let cMethod: usize = std::mem::transmute(*vTbl.add(dggal_sys::DGGRS_getZoneCRSExtent_vTblID as usize));
          if cMethod != std::mem::transmute(0usize) {
             let method : unsafe extern "C" fn(dggrs: dggal_sys::DGGRS, zone: dggal_sys::DGGRSZone, crs: dggal_sys::CRS, extent: *mut dggal_sys::CRSExtent) = std::mem::transmute(cMethod);
-            method(self.imp, zone, crs, std::ptr::from_mut(&mut extent));
+            method(self.imp, zone, *crs, std::ptr::from_mut(&mut extent));
          }
       }
       extent
    }
 
-   pub fn compactZones(&self, mut zones: Vec<dggal_sys::DGGRSZone>)
+   pub fn compactZones(&self, zones: &mut Vec<dggal_sys::DGGRSZone>)
    {
       unsafe
       {
@@ -758,6 +777,7 @@ impl DGGRS {
                n = (*am).count as usize;
                a = (*am).array;
 
+               zones.reserve(n);
                zones.set_len(n);
                ecrt_sys::memcpy(zones.as_ptr() as *mut c_void, a as *const c_void, (mem::size_of::<dggal_sys::DGGRSZone>() * n) as std::os::raw::c_ulong);
 
@@ -1005,17 +1025,90 @@ impl Drop for DGGRS {
    }
 }
 
-// NOTE: We may eventually change the File argument to a proper Rust struct/impl when added to ecrt
-// For now ecrt_sys::fileOpen() can be used to obtain a File from a file name
-pub fn readDGGSJSON(f: ecrt_sys::File) -> Option<dggal_sys::DGGSJSON>
+#[repr(transparent)]
+pub struct DGGSJSONDepth(pub Instance);
+delegate_ttau64_and_default!(DGGSJSONDepth);
+
+impl DGGSJSONDepth
 {
-   let mut result: Option<dggal_sys::DGGSJSON> = None;
+   pub fn data(&self) -> Array<FieldValue>
+   {
+      let mut data = Array::<FieldValue>::new(nullInst);
+      if self.0.0 != nullInst {
+         unsafe {
+            let members: *const dggal_sys::class_members_DGGSJSONDepth = ((self.0.0 as *const i8).wrapping_add((*dggal_sys::class_DGGSJSONDepth).offset as usize)) as *const dggal_sys::class_members_DGGSJSONDepth;
+            data.array = (*members).data;
+         }
+      }
+      data
+   }
+}
+
+#[repr(transparent)]
+pub struct DGGSJSON(pub Instance);
+delegate_ttau64_and_default!(DGGSJSON);
+
+impl DGGSJSON {
+   pub fn dggrs(&self) -> ConstString
+   {
+      let mut dggrs: ConstString = Default::default();
+      if self.0.0 != nullInst {
+         unsafe {
+            let members: *const dggal_sys::class_members_DGGSJSON = ((self.0.0 as *const i8).wrapping_add((*dggal_sys::class_DGGSJSON).offset as usize)) as *const dggal_sys::class_members_DGGSJSON;
+            dggrs = ConstString((*members).dggrs);
+         }
+      }
+      dggrs
+   }
+
+   pub fn zoneId(&self) -> ConstString
+   {
+      let mut zoneId: ConstString = Default::default();
+      if self.0.0 != nullInst {
+         unsafe {
+            let members: *const dggal_sys::class_members_DGGSJSON = ((self.0.0 as *const i8).wrapping_add((*dggal_sys::class_DGGSJSON).offset as usize)) as *const dggal_sys::class_members_DGGSJSON;
+            zoneId = ConstString((*members).zoneId);
+         }
+      }
+      zoneId
+   }
+
+   pub fn depths(&self) -> Array<i32>
+   {
+      let mut depths = Array::<i32>::new(nullInst);
+      if self.0.0 != nullInst {
+         unsafe {
+            let members: *const dggal_sys::class_members_DGGSJSON = ((self.0.0 as *const i8).wrapping_add((*dggal_sys::class_DGGSJSON).offset as usize)) as *const dggal_sys::class_members_DGGSJSON;
+            depths.array = (*members).depths;
+         }
+      }
+      depths
+   }
+
+   pub fn values(&self) -> Map<ecrt::String, ArrayOfDGGSJSONDepth>
+   {
+      let mut values = Map::<ecrt::String, ArrayOfDGGSJSONDepth>::new(nullInst);
+      if self.0.0 != nullInst {
+         unsafe {
+            let members: *const dggal_sys::class_members_DGGSJSON = ((self.0.0 as *const i8).wrapping_add((*dggal_sys::class_DGGSJSON).offset as usize)) as *const dggal_sys::class_members_DGGSJSON;
+            values.map = (*members).values;
+         }
+      }
+      values
+   }
+}
+
+pub type ArrayOfDGGSJSONDepth = Instance;
+
+pub fn readDGGSJSON(f: &File) -> Result<DGGSJSON, &str>
+{
+   let mut result: Result<DGGSJSON, &str> = Err("Failure to load DGGS-JSON");
    unsafe
    {
-      if f != nullInst {
-         let r: dggal_sys::DGGSJSON = dggal_sys::readDGGSJSON.unwrap()(f);
+      if f.file != nullInst {
+         let r: dggal_sys::DGGSJSON = dggal_sys::fnptr_readDGGSJSON.unwrap()(f.file);
          if r != nullInst {
-            result = Some(r)
+            result = Ok(DGGSJSON(Instance(r)))
          }
       }
    }

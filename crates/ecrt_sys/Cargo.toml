@@ -1,7 +1,0 @@
-[package]
-name = "ecrt_sys"
-version = "0.1.2"
-edition = "2024"
-description = "The ECERE SYS crate"
-license-file = "LICENSE"
-

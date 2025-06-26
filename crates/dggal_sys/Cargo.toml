@@ -1,9 +1,0 @@
-[package]
-name = "dggal_sys"
-version = "0.1.2"
-edition = "2024"
-description = "The DGGAL SYS crate"
-license-file = "LICENSE"
-
-[dependencies]
-ecrt_sys = "0.1.2"

@@ -119,4 +119,7 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
     println!("cargo:rustc-link-lib=static=ecrt_cStatic");
     println!("cargo:rustc-link-lib=static=ecrtStatic");
+
+    // zlib (install via sudo apt install zlib1g-dev)
+    println!("cargo:rustc-link-lib=z");
 }

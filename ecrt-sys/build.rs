@@ -51,18 +51,10 @@ fn main() {
         .current_dir(&ec_dir)
         .arg("distclean")
         .status()
-        .expect("Failed to run `make distclean` in ecere/ec/");
+        .expect(&format!("Failed to run `make distclean` in {:?}", &ec_dir));
     if !status.success() {
-        panic!("make distclean in ecere/eC/ failed");
+        panic!("{}", &format!("make distclean in {:?} failed", &ec_dir));
     }
-
-    // let ec_dir_obj = &ec_dir.join("obj");
-    // if ec_dir_obj.exists() {
-    //     println!("cargo:warning=Cleaning {:?}", ec_dir_obj); // optional debug
-    //     if let Err(err) = fs::remove_dir_all(&ec_dir_obj) {
-    //         panic!("Failed to delete {:?}: {}", ec_dir, err);
-    //     }
-    // }
 
     // Step 1: Build eC core in ecere/eC/
     let ec_dir_output = make()
@@ -112,22 +104,19 @@ fn main() {
         panic!("make in {:?} failed", bindings_dir);
     }
 
-    fs::remove_dir_all(&lib_dir).expect("Failed to delete lib/ directory");
-    fs::create_dir_all(&lib_dir).expect("Failed to create lib/ directory");
+    fs::remove_dir_all(&lib_dir).expect(&format!("Failed to delete {:?} directory", &lib_dir));
+    fs::create_dir_all(&lib_dir).expect(&format!("Failed to create {:?} directory", &lib_dir));
 
-    fs::copy(
-        ec_dir.join("obj/linux/lib/libecrt_cStatic.a"),
-        lib_dir.join("libecrt_cStatic.a"),
-    )
-    .expect("Failed to copy libecrt_cStatic.a");
+    let files_to_copy = ["libecrt_cStatic.a", "libecrtStatic.a"];
 
-    // fs::copy(
-    //     ec_dir.join("bindings/rust/obj/linux/libecrt_sys.rlib"),
-    //     lib_dir.join("libecrt_sys.rlib"),
-    // )
-    // .expect("Failed to copy libecrt_sys.rlib");
+    for file_name in &files_to_copy {
+        let src = ec_dir.join("obj/linux/lib").join(file_name);
+        let dst = lib_dir.join(file_name);
+
+        fs::copy(&src, &dst).expect(&format!("Failed to copy {}", file_name));
+    }
 
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
     println!("cargo:rustc-link-lib=static=ecrt_cStatic");
-    //println!("cargo:rustc-link-lib=static=ecrt_sys");
+    println!("cargo:rustc-link-lib=static=ecrtStatic");
 }

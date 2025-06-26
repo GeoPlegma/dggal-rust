@@ -51,18 +51,13 @@ fn main() {
         .current_dir(&dggal_dir)
         .arg("distclean")
         .status()
-        .expect("Failed to run `make distclean` in ecere/dggal/");
+        .expect(&format!(
+            "Failed to run `make distclean` in {:?}",
+            &dggal_dir
+        ));
     if !status.success() {
-        panic!("make distclean in ecere/dggal/ failed");
+        panic!("{}", &format!("make distclean in {:?} failed", &dggal_dir));
     }
-
-    // let dggal_dir_obj = &dggal_dir.join("obj");
-    // if dggal_dir_obj.exists() {
-    //     println!("cargo:warning=Cleaning {:?}", dggal_dir_obj); // optional debug
-    //     if let Err(err) = fs::remove_dir_all(&dggal_dir_obj) {
-    //         panic!("Failed to delete {:?}: {}", dggal_dir_obj, err);
-    //     }
-    // }
 
     // Step 1: Build dggal core in ecere/dggal/
     let dggal_dir_output = make()
@@ -112,22 +107,19 @@ fn main() {
         panic!("make for dggal Rust bindings failed");
     }
 
-    fs::remove_dir_all(&lib_dir).expect("Failed to delete lib/ directory");
-    fs::create_dir_all(&lib_dir).expect("Failed to create lib/ directory");
+    fs::remove_dir_all(&lib_dir).expect(&format!("Failed to delete {:?} directory", &lib_dir));
+    fs::create_dir_all(&lib_dir).expect(&format!("Failed to create {:?} directory", &lib_dir));
 
-    fs::copy(
-        dggal_dir.join("obj/linux/lib/libdggal_cStatic.a"),
-        lib_dir.join("libdggal_cStatic.a"),
-    )
-    .expect("Failed to copy libdggal_cStatic.a");
+    let files_to_copy = ["libdggal_cStatic.a", "libdggalStatic.a"];
 
-    // fs::copy(
-    //     dggal_dir.join("bindings/rust/obj/linux/libdggal_sys.rlib"),
-    //     lib_dir.join("libdggal_sys.rlib"),
-    // )
-    // .expect("Failed to copy libdggal_sys.rlib");
+    for file_name in &files_to_copy {
+        let src = dggal_dir.join("obj/linux/lib").join(file_name);
+        let dst = lib_dir.join(file_name);
+
+        fs::copy(&src, &dst).expect(&format!("Failed to copy {}", file_name));
+    }
 
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
     println!("cargo:rustc-link-lib=static=dggal_cStatic");
-    //println!("cargo:rustc-link-lib=static=ecrt_sys");
+    println!("cargo:rustc-link-lib=static=dggalStatic");
 }

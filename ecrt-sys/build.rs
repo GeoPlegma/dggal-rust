@@ -104,7 +104,9 @@ fn main() {
         panic!("make in {:?} failed", bindings_dir);
     }
 
-    fs::remove_dir_all(&lib_dir).expect(&format!("Failed to delete {:?} directory", &lib_dir));
+    if lib_dir.exists() {
+        fs::remove_dir_all(&lib_dir).expect(&format!("Failed to delete {:?} directory", &lib_dir));
+    }
     fs::create_dir_all(&lib_dir).expect(&format!("Failed to create {:?} directory", &lib_dir));
 
     let files_to_copy = ["libecrt_cStatic.a", "libecrtStatic.a"];

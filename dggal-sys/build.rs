@@ -107,7 +107,9 @@ fn main() {
         panic!("make for dggal Rust bindings failed");
     }
 
-    fs::remove_dir_all(&lib_dir).expect(&format!("Failed to delete {:?} directory", &lib_dir));
+    if lib_dir.exists() {
+        fs::remove_dir_all(&lib_dir).expect(&format!("Failed to delete {:?} directory", &lib_dir));
+    }
     fs::create_dir_all(&lib_dir).expect(&format!("Failed to create {:?} directory", &lib_dir));
 
     let files_to_copy = ["libdggal_cStatic.a", "libdggalStatic.a"];

@@ -2,3 +2,5 @@ Cargo.lock
 lib/
 dgbuild/
 target/
+*.a
+*.rlib

@@ -6,5 +6,5 @@ members = [
     "ecrt",
     "dggal-sys",
     "dggal",
-    "ecdev-rust",
+    "dggal-rust",
 ]

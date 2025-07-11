@@ -69,6 +69,10 @@ macro_rules! CRS {
 pub const epsg: dggal_sys::CRSRegistry = dggal_sys::CRSRegistry_CRSRegistry_epsg;
 pub const ogc: dggal_sys::CRSRegistry = dggal_sys::CRSRegistry_CRSRegistry_ogc;
 
+unsafe impl Sync for DGGRS {}
+unsafe impl Send for DGGRS {}
+unsafe impl Sync for DGGAL {}
+unsafe impl Send for DGGAL {}
 pub struct DGGRS {
     imp: dggal_sys::DGGRS,
     mDGGAL: ecrt_sys::Module,
@@ -1423,8 +1427,6 @@ impl Drop for DGGRS {
         }
     }
 }
-
-unsafe impl Sync for DGGRS {}
 
 #[repr(transparent)]
 pub struct DGGSJSONDepth(pub Instance);

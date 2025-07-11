@@ -99,6 +99,8 @@ impl Deref for Instance {
 }
 
 // eC runtime singleton
+unsafe impl Sync for Application {}
+unsafe impl Send for Application {}
 pub struct Application {
     pub app: ecrt_sys::Application,
 }
@@ -133,34 +135,34 @@ pub trait TTAU64 {
 
 impl TTAU64 for u64 {
     fn from_u64(value: u64) -> Self {
-        unsafe { transmute(value) }
+        value
     }
     fn to_u64(&self) -> u64 {
-        unsafe { transmute(*self) }
+        *self
     }
 }
 impl TTAU64 for i64 {
     fn from_u64(value: u64) -> Self {
-        unsafe { transmute(value) }
+        u64::cast_signed(value)
     }
     fn to_u64(&self) -> u64 {
-        unsafe { transmute(*self) }
+        i64::cast_unsigned(*self)
     }
 }
 impl TTAU64 for f64 {
     fn from_u64(value: u64) -> Self {
-        unsafe { transmute(value) }
+        f64::from_bits(value)
     }
     fn to_u64(&self) -> u64 {
-        unsafe { transmute(*self) }
+        f64::to_bits(*self)
     }
 }
 impl TTAU64 for f32 {
     fn from_u64(value: u64) -> Self {
-        unsafe { transmute(value as u32) }
+        f32::from_bits(value as u32)
     }
     fn to_u64(&self) -> u64 {
-        unsafe { transmute::<f32, u32>(*self) as u64 }
+        f32::to_bits(*self) as u64
     }
 }
 impl TTAU64 for u32 {

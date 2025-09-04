@@ -99,8 +99,6 @@ impl Deref for Instance {
 }
 
 // eC runtime singleton
-unsafe impl Sync for Application {}
-unsafe impl Send for Application {}
 pub struct Application {
     pub app: ecrt_sys::Application,
 }

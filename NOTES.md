@@ -13,3 +13,4 @@ cp ecere/dggal/bindings/rust/dggal_cffi.rs src/ffi/dggal_cffi.rs
 * add `unsafe impl` Send and Sync for Application {}, DGGRS {}, and DGGAL {}
 * make sure to adjust the `use` statements
 * replace the README.md
+* run `cargo fmt`

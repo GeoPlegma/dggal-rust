@@ -2,7 +2,7 @@
 
 When changing to a new version, do this:
 
-* update submodules for ecere/dggal and ecere/eC
+* update submodules for ecere/dggal and ecere/eC using `git submodule update --remote --merge`
 * copy these files
 ```
 cp ecere/eC/bindings/rust/ecrt.rs src/bindings/ecrt.rs

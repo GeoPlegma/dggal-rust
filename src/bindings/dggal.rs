@@ -63,11 +63,14 @@ define_bitclass! { CRS, dggal_sys::CRS,
 pub const epsg : dggal_sys::CRSRegistry = dggal_sys::CRSRegistry_CRSRegistry_epsg;
 pub const ogc  : dggal_sys::CRSRegistry = dggal_sys::CRSRegistry_CRSRegistry_ogc;
 
+unsafe impl Send for DGGRS{}
 pub struct DGGRS {
    imp: dggal_sys::DGGRS,
    mDGGAL: ecrt_sys::Module
 }
 
+unsafe impl Send for DGGAL{}
+unsafe impl Sync for DGGAL{}
 pub struct DGGAL {
    mDGGAL: ecrt_sys::Module
 }

@@ -3469,7 +3469,7 @@ extern "C" {
         extern "C" fn(
             dest: *mut ::std::os::raw::c_void,
             source: *const ::std::os::raw::c_void,
-            count: uint64,
+            count: uintsize,
         ),
     >;
 }
@@ -3480,7 +3480,7 @@ extern "C" {
         extern "C" fn(
             dest: *mut ::std::os::raw::c_void,
             source: *const ::std::os::raw::c_void,
-            count: uint,
+            count: uintsize,
         ),
     >;
 }
@@ -3491,7 +3491,7 @@ extern "C" {
         extern "C" fn(
             dest: *mut ::std::os::raw::c_void,
             source: *const ::std::os::raw::c_void,
-            count: uint,
+            count: uintsize,
         ),
     >;
 }
@@ -3518,21 +3518,21 @@ extern "C" {
 extern "C" {
     pub static mut fillBytes: ::std::option::Option<
         /*unsafe*/
-        extern "C" fn(area: *mut ::std::os::raw::c_void, value: byte, count: uint),
+        extern "C" fn(area: *mut ::std::os::raw::c_void, value: byte, count: uintsize),
     >;
 }
 /*unsafe*/
 extern "C" {
     pub static mut fillBytesBy2: ::std::option::Option<
         /*unsafe*/
-        extern "C" fn(area: *mut ::std::os::raw::c_void, value: uint16, count: uint),
+        extern "C" fn(area: *mut ::std::os::raw::c_void, value: uint16, count: uintsize),
     >;
 }
 /*unsafe*/
 extern "C" {
     pub static mut fillBytesBy4: ::std::option::Option<
         /*unsafe*/
-        extern "C" fn(area: *mut ::std::os::raw::c_void, value: uint, count: uint),
+        extern "C" fn(area: *mut ::std::os::raw::c_void, value: uint, count: uintsize),
     >;
 }
 /*unsafe*/
@@ -3633,7 +3633,7 @@ extern "C" {
         extern "C" fn(
             dest: *mut ::std::os::raw::c_void,
             source: *const ::std::os::raw::c_void,
-            count: uint,
+            count: uintsize,
         ),
     >;
 }
@@ -3949,7 +3949,7 @@ extern "C" {
 /*unsafe*/
 extern "C" {
     pub static mut memswap: ::std::option::Option<
-        /*unsafe*/ extern "C" fn(a: *mut byte, b: *mut byte, size: uint),
+        /*unsafe*/ extern "C" fn(a: *mut byte, b: *mut byte, size: uintsize),
     >;
 }
 /*unsafe*/
@@ -9212,11 +9212,11 @@ extern "C" {
 }
 /*unsafe*/
 extern "C" {
-    pub fn __eCNameSpace__eC__types__eSystem_New(size: uint) -> *mut ::std::os::raw::c_void;
+    pub fn __eCNameSpace__eC__types__eSystem_New(size: uintsize) -> *mut ::std::os::raw::c_void;
 }
 /*unsafe*/
 extern "C" {
-    pub fn __eCNameSpace__eC__types__eSystem_New0(size: uint) -> *mut ::std::os::raw::c_void;
+    pub fn __eCNameSpace__eC__types__eSystem_New0(size: uintsize) -> *mut ::std::os::raw::c_void;
 }
 /*unsafe*/
 extern "C" {
@@ -9260,14 +9260,14 @@ extern "C" {
 extern "C" {
     pub fn __eCNameSpace__eC__types__eSystem_Renew(
         memory: *mut ::std::os::raw::c_void,
-        size: uint,
+        size: uintsize,
     ) -> *mut ::std::os::raw::c_void;
 }
 /*unsafe*/
 extern "C" {
     pub fn __eCNameSpace__eC__types__eSystem_Renew0(
         memory: *mut ::std::os::raw::c_void,
-        size: uint,
+        size: uintsize,
     ) -> *mut ::std::os::raw::c_void;
 }
 /*unsafe*/

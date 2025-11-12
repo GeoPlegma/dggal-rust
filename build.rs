@@ -49,6 +49,32 @@ fn main() {
     //
     //
 
+    // Patch to comment line regarding crossplatform.mk
+    let cleanfile = manifest_dir.join("ecere/eC/Cleanfile");
+    if let Ok(contents) = fs::read_to_string(&cleanfile) {
+        let patched = contents
+            .lines()
+            .map(|line| {
+                if line
+                    .trim_start()
+                    .starts_with("include $(_SDK_SRC_ROOT)crossplatform.mk")
+                {
+                    format!("# {}", line)
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        fs::write(&cleanfile, patched).expect("Failed to write patched Cleanfile");
+    }
+
+    //
+    //
+    //
+    //
+
     let ec_dir = manifest_dir.join("ecere/eC");
     let ec_bindings_dir = ec_dir.join("bindings/c");
 

@@ -382,7 +382,7 @@ impl DGGRS {
             } else {
                 (*c)._vTbl
             };
-            let mut ch = [nullZone; 9]; // REVIEW: Any way to avoid this initialization?
+            let mut ch = [nullZone; 13]; // REVIEW: Any way to avoid this initialization?
             let cMethod: usize =
                 std::mem::transmute(*vTbl.add(dggal_sys::DGGRS_getZoneChildren_vTblID as usize));
             if cMethod != std::mem::transmute(0usize) {
@@ -1150,6 +1150,33 @@ impl DGGRS {
         }
     }
 
+    pub fn zoneHasSubZone(
+        &self,
+        hayStack: dggal_sys::DGGRSZone,
+        needle: dggal_sys::DGGRSZone,
+    ) -> bool {
+        let mut result: bool = false;
+        unsafe {
+            let c = dggal_sys::class_DGGRS;
+            let vTbl = if self.imp != nullInst && (*self.imp)._vTbl != nullVTbl {
+                (*self.imp)._vTbl
+            } else {
+                (*c)._vTbl
+            };
+            let cMethod: usize =
+                std::mem::transmute(*vTbl.add(dggal_sys::DGGRS_zoneHasSubZone_vTblID as usize));
+            if cMethod != std::mem::transmute(0usize) {
+                let method: unsafe extern "C" fn(
+                    dggrs: dggal_sys::DGGRS,
+                    hayStack: dggal_sys::DGGRSZone,
+                    needle: dggal_sys::DGGRSZone,
+                ) -> u32 = std::mem::transmute(cMethod);
+                result = method(self.imp, hayStack, needle) != 0;
+            }
+        }
+        result
+    }
+
     // These methods are NOT virtual:
     pub fn get64KDepth(&self) -> i32 {
         let mut depth = -1;
@@ -1289,20 +1316,6 @@ impl DGGRS {
             if self.imp != nullInst {
                 result =
                     dggal_sys::DGGRS_isZoneImmediateParentOf.unwrap()(self.imp, parent, child) != 0;
-            }
-        }
-        result
-    }
-
-    pub fn zoneHasSubZone(
-        &self,
-        hayStack: dggal_sys::DGGRSZone,
-        needle: dggal_sys::DGGRSZone,
-    ) -> bool {
-        let mut result: bool = false;
-        unsafe {
-            if self.imp != nullInst {
-                result = dggal_sys::DGGRS_zoneHasSubZone.unwrap()(self.imp, hayStack, needle) != 0;
             }
         }
         result

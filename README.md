@@ -54,8 +54,8 @@ use crate::ffi::dggal_cffi as dggal_sys;
 ````
 and
 ````
-unsafe impl Send for DGGAL{};
-unsafe impl Sync for DGGAL{};
+unsafe impl Send for DGGAL{}
+unsafe impl Sync for DGGAL{}
 ````
 
 

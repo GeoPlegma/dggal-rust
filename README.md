@@ -26,6 +26,11 @@ in `src/bindings/ecrt.rs`
 ````
 use crate::ffi::ecrt_cffi as ecrt_sys;
 ````
+and 
+````
+unsafe impl Sync for Application {}
+unsafe impl Send for Application {}
+````
 
 in `src/ffi/ecrt_cffi.rs`
 ````
@@ -35,9 +40,9 @@ unsafe impl Sync for class_members_Instance {}
 
 in `src/bindings/dggal.rs`
 ````
-use crate::bindings::ecrt;
-
 use crate::ffi::ecrt_cffi as ecrt_sys;
+
+use crate::bindings::ecrt;
 
 use crate::define_bitclass;
 use crate::delegate_ttau64_and_default;
@@ -47,6 +52,12 @@ use crate::delegate_ttau64_and_default;
 use crate::ffi::dggal_cffi as dggal_sys;
 
 ````
+and
+````
+unsafe impl Send for DGGAL{};
+unsafe impl Sync for DGGAL{};
+````
+
 
 in `src/ffi/dggal_cffi.rs`
 ````

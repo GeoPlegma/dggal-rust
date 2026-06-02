@@ -1,1 +1,1 @@
-../../ecere/dggal/bindings/rust/dggal_cffi.rs
+include!("../../ecere/dggal/bindings/rust/dggal_cffi.rs");

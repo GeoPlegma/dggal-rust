@@ -1,1 +1,1 @@
-../../ecere/eC/bindings/rust/ecrt_cffi.rs
+include!("../../ecere/eC/bindings/rust/ecrt_cffi.rs");

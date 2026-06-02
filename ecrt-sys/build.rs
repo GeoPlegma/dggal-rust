@@ -54,7 +54,6 @@ fn obj_subdir(subdir: &str) -> String {
 }
 
 fn obj_lib_subdir() -> String { obj_subdir("lib") }
-fn obj_bin_subdir() -> String { obj_subdir("bin") }
 
 fn find_sh_dir() -> Option<PathBuf> {
     if let Ok(out) = Command::new("where.exe").arg("sh.exe").output() {
@@ -95,8 +94,6 @@ fn main() {
     let bindings_dir = ec_dir.join("bindings/c");
     let lib_dir = manifest_dir.join("lib");
 
-    let bin_out_dir = ec_dir.join(obj_bin_subdir());
-
     // Step 1: Build eC core in ecere/eC/
     let mut ec_make = make();
     ec_make
@@ -121,34 +118,6 @@ fn main() {
 
     if !ec_dir_output.status.success() {
         panic!("make in {:?} failed", ec_dir);
-    }
-
-    // Post-build: ensure eC compiler tools are in obj/<platform>/bin/.
-    // The 2nd-stage tools (ecp/obj/release.*) link against ecrt.dll and can
-    // crash with access violations on some Windows setups.  Prefer the
-    // bootstrap tools (bootstrap/obj/bin.*) which are pure-C self-contained.
-    let exe = if cfg!(target_os = "windows") { ".exe" } else { "" };
-    for tool in &["ecp", "ecc", "ecs"] {
-        let tool_file = format!("{}{}", tool, exe);
-        let dst = bin_out_dir.join(&tool_file);
-        if !dst.exists() {
-            let bootstrap_src = ec_dir
-                .join("bootstrap")
-                .join("obj")
-                .join(format!("bin.{}", platform_name()))
-                .join(&tool_file);
-            let release_src = ec_dir
-                .join(tool)
-                .join("obj")
-                .join(format!("release.{}", platform_name()))
-                .join(&tool_file);
-            let src = if bootstrap_src.exists() { bootstrap_src } else { release_src };
-            if src.exists() {
-                fs::copy(&src, &dst).unwrap_or_else(|e| {
-                    panic!("Failed to copy {} from {:?}: {}", tool_file, src, e)
-                });
-            }
-        }
     }
 
     let bindings_dir_obj = &bindings_dir.join("obj");

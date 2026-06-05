@@ -3,8 +3,13 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-/// make is an alias for gnu_make.
-pub use gnu_make as make;
+#[cfg(target_os = "windows")]
+fn make() -> Command {
+    let mut cmd = Command::new("mingw32-make");
+    cmd.env_remove("SHELL");
+    cmd.arg("SHELL=C:\\Windows\\System32\\cmd.exe");
+    cmd
+}
 
 #[cfg(any(
     target_os = "freebsd",
@@ -12,28 +17,34 @@ pub use gnu_make as make;
     target_os = "netbsd",
     target_os = "openbsd",
 ))]
-pub fn gnu_make() -> Command {
+fn make() -> Command {
     Command::new("gmake")
 }
 
 #[cfg(not(any(
+    target_os = "windows",
     target_os = "freebsd",
     target_os = "dragonfly",
     target_os = "netbsd",
     target_os = "openbsd",
 )))]
-pub fn gnu_make() -> Command {
+fn make() -> Command {
     Command::new("make")
 }
 
-#[cfg(any(
-    target_os = "freebsd",
-    target_os = "dragonfly",
-    target_os = "netbsd",
-    target_os = "openbsd",
-))]
-pub fn bsd_make() -> Command {
-    Command::new("make")
+fn platform_lib_dir() -> &'static str {
+    #[cfg(target_os = "windows")]
+    {
+        "obj/win32/lib"
+    }
+    #[cfg(target_os = "macos")]
+    {
+        "obj/apple/lib"
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        "obj/linux/lib"
+    }
 }
 
 fn main() {
@@ -43,11 +54,6 @@ fn main() {
         fs::remove_dir_all(&lib_dir).expect(&format!("Failed to delete {:?} directory", &lib_dir));
     }
     fs::create_dir_all(&lib_dir).expect(&format!("Failed to create {:?} directory", &lib_dir));
-
-    //
-    //
-    //
-    //
 
     let ec_dir = manifest_dir.join("ecere/eC");
     let ec_bindings_dir = ec_dir.join("bindings/c");
@@ -62,7 +68,7 @@ fn main() {
         panic!("{}", &format!("make distclean in {:?} failed", &ec_dir));
     }
 
-    // Step 1: Build eC core in ecere/eC/
+    // Step 1: Build eC core
     let ec_dir_output = make()
         .current_dir(&ec_dir)
         .env_remove("DEBUG")
@@ -113,21 +119,16 @@ fn main() {
     let files_to_copy = ["libecrt_cStatic.a", "libecrtStatic.a"];
 
     for file_name in &files_to_copy {
-        let src = ec_dir.join("obj/linux/lib").join(file_name);
+        let src = ec_dir.join(platform_lib_dir()).join(file_name);
         let dst = lib_dir.join(file_name);
 
         fs::copy(&src, &dst).expect(&format!("Failed to copy {}", file_name));
     }
 
-    //
-    //
-    //
-    //
-
     let dggal_dir = manifest_dir.join("ecere/dggal");
     let dggal_bindings_dir = dggal_dir.join("bindings/c");
 
-    // Step 0: clean ecere/eC/
+    // Step 0: clean ecere/dggal/
     let status = make()
         .current_dir(&dggal_dir)
         .arg("distclean")
@@ -140,7 +141,7 @@ fn main() {
         panic!("{}", &format!("make distclean in {:?} failed", &dggal_dir));
     }
 
-    // Step 1: Build dggal core in ecere/dggal/
+    // Step 1: Build DGGAL core
     let dggal_dir_output = make()
         .current_dir(&dggal_dir)
         .env_remove("DEBUG")
@@ -191,7 +192,7 @@ fn main() {
     let files_to_copy = ["libdggal_cStatic.a", "libdggalStatic.a"];
 
     for file_name in &files_to_copy {
-        let src = dggal_dir.join("obj/linux/lib").join(file_name);
+        let src = dggal_dir.join(platform_lib_dir()).join(file_name);
         let dst = lib_dir.join(file_name);
 
         fs::copy(&src, &dst).expect(&format!("Failed to copy {}", file_name));
